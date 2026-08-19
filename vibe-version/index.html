@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .app-header h1 {
+      font-size: 24px;
+      color: #333;
+    }
+
+    .app-header .badge {
+      background: #667eea;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-area input:focus {
+      border-color: #667eea;
+    }
+
+    .input-area button {
+      padding: 12px 18px;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .input-area button:hover {
+      background: #5a6fd6;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .filters button {
+      flex: 1;
+      padding: 8px 0;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filters button.active {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .task-list {
+      list-style: none;
+      max-height: 320px;
+      overflow-y: auto;
+      margin-bottom: 14px;
+    }
+
+    .task-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .task-list li:hover {
+      background: #f9f9ff;
+    }
+
+    .task-list li span {
+      font-size: 15px;
+      color: #333;
+      word-break: break-word;
+    }
+
+    .task-list li.completed span {
+      text-decoration: line-through;
+      color: #b0b0b0;
+    }
+
+    .task-list li .check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ccc;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: transparent;
+      margin-right: 10px;
+      transition: all 0.2s;
+    }
+
+    .task-list li.completed .check {
+      background: #667eea;
+      border-color: #667eea;
+      color: #fff;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+      padding: 24px 0;
+    }
+
+    .task-count {
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      border-top: 1px solid #f0f0f0;
+      padding-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="app-header">
+      <h1>Tasks</h1>
+      <span class="badge">My Todo</span>
+    </div>
+
+    <div class="input-area">
+      <input id="taskInput" type="text" placeholder="What needs to be done?" autocomplete="off" />
+      <button id="addBtn">Add</button>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="active">Active</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+    </div>
+
+    <ul id="taskList" class="task-list"></ul>
+
+    <div id="taskCount" class="task-count">0 tasks remaining</div>
+  </main>
+
+  <script>
+    const input = document.getElementById('taskInput');
+    const addBtn = document.getElementById('addBtn');
+    const list = document.getElementById('taskList');
+    const countEl = document.getElementById('taskCount');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+
+    let tasks = [];
+    let currentFilter = 'all';
+
+    function render() {
+      const visible = tasks.filter((t) => {
+        if (currentFilter === 'active') return !t.completed;
+        if (currentFilter === 'completed') return t.completed;
+        return true;
+      });
+
+      list.innerHTML = '';
+
+      if (visible.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty-state';
+        li.style.cssText = 'cursor: default; border: none; display: block;';
+        li.textContent = 'No tasks here. Add one above!';
+        list.appendChild(li);
+      }
+
+      visible.forEach((task) => {
+        const li = document.createElement('li');
+        li.className = task.completed ? 'completed' : '';
+
+        const check = document.createElement('span');
+        check.className = 'check';
+        check.textContent = task.completed ? '✓' : '';
+
+        const text = document.createElement('span');
+        text.textContent = task.title;
+
+        li.appendChild(check);
+        li.appendChild(text);
+
+        li.addEventListener('click', () => {
+          task.completed = !task.completed;
+          render();
+        });
+
+        list.appendChild(li);
+      });
+
+      const remaining = tasks.filter((t) => !t.completed).length;
+      countEl.textContent = remaining + (remaining === 1 ? ' task remaining' : ' tasks remaining');
+    }
+
+    function addTask() {
+      const title = input.value.trim();
+      if (!title) return;
+      tasks.push({ title, completed: false });
+      input.value = '';
+      input.focus();
+      render();
+    }
+
+    addBtn.addEventListener('click', addTask);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
